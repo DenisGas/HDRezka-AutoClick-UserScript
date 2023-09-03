@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HDRezka AutoClick
 // @namespace    http://tampermonkey.net/
-// @version      0.3
+// @version      0.4
 // @description  try to take over the world!
 // @author       DenisGasilo
 // @match        https://rezka.ag/*
@@ -13,24 +13,16 @@
 
 (function () {
 
-  playVideo(getElement('video'))
-
-  const openingDuration = GM_getValue('openingDuration', 0);
-  const openingStart = GM_getValue('openingStart', 0);
-  const titleDuration = GM_getValue('titleDuration', 0);
-  const titleStart = GM_getValue('titleStart', 0);
-
-
   setInterval(function () {
-    skipOpening(openingDuration, openingStart);
+    skipOpening(GM_getValue('openingDuration', 0), GM_getValue('openingStart', 0));
   }, 100);
 
   setInterval(function () {
-    skipTitles(titleDuration, titleStart)
+    skipTitles(GM_getValue('titleDuration', 0), GM_getValue('titleStart', 0));
   }, 1000);
 
   setInterval(function () {
-    nextEpisode()
+    nextEpisode(GM_getValue('isRemoveDelayNextEpisode', true));
   }, 100);
 
   function getElement(selector) {
@@ -43,11 +35,13 @@
     }
   }
 
-  function nextEpisode() {
-    const nextEpisodeBtn = getElement('.c100.center.p10');
-    if (nextEpisodeBtn) {
-      nextEpisodeBtn.click();
-    }
+  function nextEpisode(bool) {
+     if(bool){
+         const nextEpisodeBtn = getElement('.c100.center.p10');
+         if (nextEpisodeBtn) {
+             nextEpisodeBtn.click();
+         }
+     }
   }
 
   function skipOpening(openingDuration = 0, openingTimeStart = 0) {
@@ -92,6 +86,11 @@ function createAnimeSettingsDialog() {
       <h1>Название аниме</h1>
       <input disabled type="text" id="animeTitleInput"
         value="${GM_getValue('animeTitle', (getElement('.b-post__origtitle').innerText))}">
+       <div class="custom-checkbox">
+        <h2>Базовые настройки</h2>
+        <label for="isRemoveDelayNextEpisode">Убрать задержку начала следущей серии</label>
+        <input type="checkbox" value="${GM_getValue('isRemoveDelayNextEpisode', true)}" checked id="isRemoveDelayNextEpisode">
+      </div>
       <div>
         <h2>Пропуск опенинга</h2>
         <label for="openingDuration">Продолжительность опенинга</label>
@@ -110,6 +109,10 @@ function createAnimeSettingsDialog() {
       </div>
       <button id="saveSettings">Сохранить</button>
     </div>
+    <footer>
+    <p style="margin-top:10px;font-size:14px;">© Made by DenisGasilo <a target="_blank" href="https://github.com/DenisGas/HDRezka-AutoClick-UserScript">Extension
+        page</a></p>
+  </footer>
   </div>
   <div id="modalOverlay" class="modal-overlay"></div>
     `;
@@ -126,6 +129,8 @@ function createAnimeSettingsDialog() {
     const titleStartInput = document.getElementById('titleStart');
     const saveButton = document.getElementById('saveSettings');
     const modalOverlay = document.getElementById('modalOverlay');
+    const removeDelayNextEpisodeCheckbox = document.getElementById('isRemoveDelayNextEpisode');
+
 
     modalOverlay.addEventListener('click', () => {
       modalOverlay.style.display = 'none';
@@ -142,6 +147,8 @@ function createAnimeSettingsDialog() {
       GM_setValue('openingStart', openingStartInput.value);
       GM_setValue('titleDuration', titleDurationInput.value);
       GM_setValue('titleStart', titleStartInput.value);
+      GM_setValue('isRemoveDelayNextEpisode', removeDelayNextEpisodeCheckbox.checked);
+       updateData();
       // Закрываем диалоговое окно
       dialog.style.display = 'none';
       modalOverlay.style.display = 'none';
@@ -181,6 +188,7 @@ const buttonHTML = `
   }
 
   function updateData() {
+    const removeDelayNextEpisodeCheckbox = document.getElementById('isRemoveDelayNextEpisode');
     const openingDurationInput = document.getElementById('openingDuration');
     const openingStartInput = document.getElementById('openingStart');
     const titleDurationInput = document.getElementById('titleDuration');
@@ -191,11 +199,13 @@ const buttonHTML = `
     openingStartInput.value = GM_getValue('openingStart', 0);
     titleDurationInput.value = GM_getValue('titleDuration', 0);
     titleStartInput.value = GM_getValue('titleStart', 0);
+    removeDelayNextEpisodeCheckbox.value = GM_getValue('isRemoveDelayNextEpisode', true);
+    removeDelayNextEpisodeCheckbox.checked = GM_getValue('isRemoveDelayNextEpisode', true);
   }
 
   // Создаем стили для диалогового окна
   GM_addStyle(`
-#animeSettingsDialog {
+  #animeSettingsDialog {
   font-family: 'Courier New', Courier, monospace;
   color: #fff;
   position: fixed;
@@ -249,7 +259,7 @@ const buttonHTML = `
 }
 
 .modal-overlay {
-  display: block;
+  display: none;
   position: fixed;
   top: 0;
   left: 0;
@@ -260,7 +270,7 @@ const buttonHTML = `
 }
 
 .modal-dialog {
-  display: block;
+  display: none;
   position: fixed;
   top: 50%;
   left: 50%;
@@ -296,6 +306,9 @@ const buttonHTML = `
 .custom-button:hover {
   background-color: #555;
 }
+
+
+
 
     `);
 
