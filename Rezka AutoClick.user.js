@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HDRezka AutoClick
 // @namespace    http://tampermonkey.net/
-// @version      0.4
+// @version      0.4.1
 // @description  try to take over the world!
 // @author       DenisGasilo
 // @match        https://rezka.ag/*
@@ -194,7 +194,7 @@ const buttonHTML = `
     const titleDurationInput = document.getElementById('titleDuration');
     const titleStartInput = document.getElementById('titleStart');
     const animeTitleInput = document.getElementById('animeTitleInput');
-    animeTitleInput.value = GM_getValue('animeTitle', (getElement('.b-post__origtitle').innerText));
+    animeTitleInput.value = getElement('.b-post__origtitle').innerText;
     openingDurationInput.value = GM_getValue('openingDuration', 0);
     openingStartInput.value = GM_getValue('openingStart', 0);
     titleDurationInput.value = GM_getValue('titleDuration', 0);
