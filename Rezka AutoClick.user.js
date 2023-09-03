@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rezka AutoClick
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.2
 // @description  try to take over the world!
 // @author       DenisGasilo
 // @match        https://rezka.ag/*
@@ -53,25 +53,42 @@
   function skipOpening(openingDuration = 0, openingTimeStart = 0) {
     openingDuration = Number(openingDuration);
     openingTimeStart = Number(openingTimeStart);
-    const videoElement = getElement('video')
-    console.log(openingDuration + openingTimeStart);
-    if (videoElement.currentTime < openingDuration + openingTimeStart) {
+    const videoElement = getElement('video');
+    if (videoElement.currentTime > openingTimeStart && (videoElement.currentTime < openingDuration + openingTimeStart)) {
       videoElement.currentTime = openingDuration + openingTimeStart;
     }
   }
   function skipTitles(titlesDuration = 0, titlesTimeStart = 0) {
     titlesDuration = Number(titlesDuration);
     titlesTimeStart = Number(titlesTimeStart);
-    const videoElement = getElement('video')
-    if (videoElement.currentTime > (videoElement.duration - titlesDuration + titlesTimeStart) && videoElement.currentTime < (videoElement.duration - 5)) {
-      videoElement.currentTime = videoElement.duration - 0.1;
+    const videoElement = getElement('video');
+    if(titlesTimeStart > 1){
+        if (videoElement.currentTime > titlesTimeStart && videoElement.currentTime < (titlesTimeStart + titlesDuration-1)) {
+            videoElement.currentTime = titlesTimeStart + titlesDuration-1;
+        }
+    }else{
+        if (videoElement.currentTime > (videoElement.duration - titlesDuration) && videoElement.currentTime < (videoElement.duration - 5)) {
+            videoElement.currentTime = videoElement.duration-0.1;
+        }
     }
   }
 
+    function openModal() {
+    const modal = document.getElementById("animeSettingsDialog");
+    modal.style.display = "block";
+}
+
+function closeModal() {
+    const modal = document.getElementById("animeSettingsDialog");
+    modal.style.display = "none";
+}
+
+
   // Функция для создания и отображения диалогового окна
-  function createAnimeSettingsDialog() {
+function createAnimeSettingsDialog() {
     const dialogHTML = `
-            <div id="animeSettingsDialog" style="display: none;">
+        <div id="animeSettingsDialog" class="modal-dialog">
+            <div class="modal-content">
                 <h1>Название аниме</h1>
                 <input disabled type="text" id="animeTitleInput" value="${GM_getValue('animeTitle', (getElement('.b-post__origtitle').innerText))}">
                 <div>
@@ -92,7 +109,9 @@
                 </div>
                 <button id="saveSettings">Сохранить</button>
             </div>
-        `;
+        </div>
+        <div id="modalOverlay" class="modal-overlay"></div>
+    `;
 
     const dialogContainer = document.createElement('div');
     dialogContainer.innerHTML = dialogHTML;
@@ -105,6 +124,12 @@
     const titleDurationInput = document.getElementById('titleDuration');
     const titleStartInput = document.getElementById('titleStart');
     const saveButton = document.getElementById('saveSettings');
+    const modalOverlay = document.getElementById('modalOverlay');
+
+    modalOverlay.addEventListener('click', () => {
+      modalOverlay.style.display = 'none';
+      dialog.style.display = 'none';
+    });
 
     // Установка начальных значений из локального хранилища
     updateData();
@@ -118,16 +143,18 @@
       GM_setValue('titleStart', titleStartInput.value);
       // Закрываем диалоговое окно
       dialog.style.display = 'none';
+      modalOverlay.style.display = 'none';
     });
   }
 
   // Функция для создания и отображения кнопки для вызова диалогового окна
   function createOpenDialogButton() {
-    const buttonHTML = `
-            <div id="openDialogButton" style="position: fixed; top: 10px; right: 10px; cursor: pointer;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M12 2c-5.52 0-10 4.48-10 10s4.48 10 10 10 10-4.48 10-10-4.48-10-10-10zm-1 17h-2v-2h2v2zm0-4h-2v-6h2v6z"/></svg>
-            </div>
-        `;
+const buttonHTML = `
+    <div id="openDialogButton" class="custom-button">
+        &#x2699;
+    </div>
+`;
+
 
     const buttonContainer = document.createElement('div');
     buttonContainer.innerHTML = buttonHTML;
@@ -137,8 +164,17 @@
 
     // Обработчик для открытия диалогового окна по клику на кнопку
     openButton.addEventListener('click', () => {
+      const modalOverlay = document.getElementById('modalOverlay');
       const dialog = document.getElementById('animeSettingsDialog');
       updateData();
+      if(modalOverlay.style.display === 'block'){
+
+      modalOverlay.style.display = 'none';
+      dialog.style.display = 'none';
+          return
+        }
+
+      modalOverlay.style.display = 'block';
       dialog.style.display = 'block';
     });
   }
@@ -148,6 +184,7 @@
     const openingStartInput = document.getElementById('openingStart');
     const titleDurationInput = document.getElementById('titleDuration');
     const titleStartInput = document.getElementById('titleStart');
+    const animeTitleInput = document.getElementById('animeTitleInput');
     animeTitleInput.value = GM_getValue('animeTitle', (getElement('.b-post__origtitle').innerText));
     openingDurationInput.value = GM_getValue('openingDuration', 0);
     openingStartInput.value = GM_getValue('openingStart', 0);
@@ -171,7 +208,70 @@
         #animeSettingsDialog input[type="number"] {
             width: 50px;
         }
+
+
+            .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+    }
+
+    .modal-dialog {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: #fff;
+        z-index: 1001;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Дополнительный стиль для кнопки закрытия */
+    .modal-dialog button.close-button {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #333;
+    }
+
+            .custom-button {
+                    z-index: 1001;
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        cursor: pointer;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 24px;
+        color: #fff;
+        font-weight: bold;
+        text-align: center;
+        line-height: 50px;
+        background-color: #888;
+        transition: background-color 0.2s;
+    }
+
+    .custom-button:hover {
+        background-color: #555;
+    }
     `);
+
 
   // Создаем и отображаем диалоговое окно и кнопку
   createAnimeSettingsDialog();
