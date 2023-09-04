@@ -1,0 +1,16 @@
+{
+    "globalSettings": {
+        "lang": "ru",
+        "scriptOFF": false,
+        "removeDelayNextEpisode": true
+    },
+    "titleSettings": [
+        {
+            "name": "D.Gray-man",
+            "openingDuration": "90",
+            "openingStart": "0",
+            "titleDuration": "110",
+            "titleStart": "0"
+        }
+    ]
+}
