@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HDRezka AutoClick
 // @namespace    http://tampermonkey.net/
-// @version      0.9.0
+// @version      0.9.1
 // @description  try to take over the world!
 // @author       DenisGasilo
 // @match        https://rezka.ag/*
@@ -14,20 +14,44 @@
 (function () {
 
   if (getElement('video')) {
+    const globalSettingsD = {
+      "lang": "ru",
+      "scriptOFF": false,
+      "removeDelayNextEpisode": true
+    }
+
+    let titleSettings = {
+      "name": "name",
+      "openingDuration": "0",
+      "openingStart": "0",
+      "titleDuration": "0",
+      "titleStart": "0"
+    }
+
+    const titleSettingsArray = GM_getValue('titleSettings', []);
+    const globalSettings = GM_getValue('globalSettings', globalSettingsD);
+
+    const existingIndex = titleSettingsArray.findIndex(item => item.name === getElement('.b-post__origtitle').innerText);
+
+
+    if (existingIndex !== -1) {
+      titleSettings = titleSettingsArray[existingIndex];
+    }
+
     setInterval(function () {
-      skipOpening(GM_getValue('openingDuration', 0), GM_getValue('openingStart', 0));
+      skipOpening(titleSettings.openingDuration, titleSettings.openingStart);
     }
 
       , 100);
 
     setInterval(function () {
-      skipTitles(GM_getValue('titleDuration', 0), GM_getValue('titleStart', 0));
+      skipTitles(titleSettings.titleDuration, titleSettings.titleStart);
     }
 
       , 1000);
 
     setInterval(function () {
-      nextEpisode(GM_getValue('isRemoveDelayNextEpisode', true));
+      nextEpisode(globalSettings.removeDelayNextEpisode);
     }
 
       , 100);
@@ -334,9 +358,6 @@
       .custom-button:hover {
         background-color: #555;
       }
-
-
-
 
       `);
 })();
