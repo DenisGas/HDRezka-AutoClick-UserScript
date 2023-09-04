@@ -1,0 +1,1 @@
+# HDRezka-AutoClick-UserScript
