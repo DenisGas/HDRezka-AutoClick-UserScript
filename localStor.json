@@ -2,7 +2,9 @@
     "globalSettings": {
         "lang": "ru",
         "scriptOFF": false,
-        "removeDelayNextEpisode": true
+        "removeDelayNextEpisode": true,
+        "autoSkipOpening": true,
+        "autoSkipTitles": true
     },
     "titleSettings": [
         {
@@ -10,6 +12,20 @@
             "openingDuration": "90",
             "openingStart": "0",
             "titleDuration": "110",
+            "titleStart": "0"
+        },
+        {
+            "name": "Kizuna no Ariru / Kizuna No Allele",
+            "openingDuration": "60",
+            "openingStart": "0",
+            "titleDuration": "0",
+            "titleStart": "0"
+        },
+        {
+            "name": "Liar Liar",
+            "openingDuration": "20",
+            "openingStart": "0",
+            "titleDuration": "100",
             "titleStart": "0"
         }
     ]
