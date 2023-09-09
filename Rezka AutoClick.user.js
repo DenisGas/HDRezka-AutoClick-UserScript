@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HDRezka AutoClick
 // @namespace    http://tampermonkey.net/
-// @version      0.9.2
+// @version      0.9.3
 // @description  try to take over the world!
 // @author       DenisGasilo
 // @match        https://rezka.ag/*
@@ -13,42 +13,98 @@
 
 (function () {
 
+  const intervalArray = [];
+  const keyCupEventArray = [];
+
   if (getElement('video')) {
-
-    setInterval(function () {
-      const titleSettings = getTitleSettings();
-      skipOpening(titleSettings.openingDuration, titleSettings.openingStart);
-    }
-
-      , 100);
-
-    setInterval(function () {
-      const titleSettings = getTitleSettings();
-      skipTitles(titleSettings.titleDuration, titleSettings.titleStart);
-    }
-
-      , 1000);
-
-    setInterval(function () {
-      const globalSettings = getGlobalSettings();
-      nextEpisode(globalSettings.removeDelayNextEpisode);
-    }
-
-      , 100);
-
     createAnimeSettingsDialog();
     createOpenDialogButton();
   }
 
-document.addEventListener("keydown", function(event) {
-  if (event.altKey && event.key === "p") {
-    const titleSettings = getTitleSettings();
-    skipOpening(titleSettings.openingDuration, getElement('video').currentTime);
+  function addEventListener(target, type, callback, options) {
+    const listener = { target, type, callback, options };
+    target.addEventListener(type, callback, options);
+    keyCupEventArray.push(listener);
   }
-});
+
+  function removeAllEventListeners() {
+    for (const listener of keyCupEventArray) {
+      listener.target.removeEventListener(listener.type, listener.callback, listener.options);
+    }
+    keyCupEventArray.length = 0;
+  }
 
 
+  function customSetInterval(callback, delay, ...args) {
+    const intervalId = setInterval(callback, delay, ...args);
+    intervalArray.push(intervalId);
+    return intervalId;
+  }
 
+  function clearAllIntervals() {
+    for (const intervalId of intervalArray) {
+      clearInterval(intervalId);
+    }
+    intervalArray.length = 0;
+  }
+
+  function scriptOn(isRemoveDelayNextEpisode, isAutoSkipOpening, isAutoSkipTitles) {
+
+    removeAllEventListeners();
+    clearAllIntervals();
+
+    const titleSettings = getTitleSettings();
+
+    if (isRemoveDelayNextEpisode) {
+      customSetInterval(function () {
+        removeDelayNextEpisode(isRemoveDelayNextEpisode);
+      }, 100);
+    }
+
+    if (isAutoSkipOpening) {
+      customSetInterval(function () {
+        skipOpening(titleSettings.openingDuration, titleSettings.openingStart);
+      }, 100);
+    } else {
+      addEventListener(document, 'keydown', function (event) {
+        if (event.altKey && event.key === "o") {
+          const titleSettings = getTitleSettings();
+          skipOpening(titleSettings.openingDuration, getElement('video').currentTime);
+        }
+      });
+    }
+
+    if (isAutoSkipTitles) {
+      customSetInterval(function () {
+        skipTitles(titleSettings.titleDuration, titleSettings.titleStart);
+      }, 1000);
+    } else {
+      addEventListener(document, 'keydown', function (event) {
+        if (event.altKey && event.key === "t") {
+          const titleSettings = getTitleSettings();
+          skipOpening(titleSettings.titleDuration, getElement('video').currentTime);
+        }
+      });
+    }
+
+    addEventListener(document, 'keydown', function (event) {
+      if (event.altKey && event.key === "n") {
+        nextSeries(getElement('video'));
+      }
+    });
+
+    addEventListener(document, 'keydown', function (event) {
+      if (event.altKey && event.key === "0") {
+        goToVideoStartTime(getElement('video'));
+      }
+    });
+
+    addEventListener(document, 'keydown', function (event) {
+      if (event.altKey && event.key === "p") {
+        playVideo(getElement('video'));
+      }
+    });
+  }
 
   function getTitleSettings() {
     let titleSettings = {
@@ -75,7 +131,10 @@ document.addEventListener("keydown", function(event) {
     const globalSettings = {
       "lang": "ru",
       "scriptOFF": false,
-      "removeDelayNextEpisode": true
+      "removeDelayNextEpisode": true,
+      "autoSkipOpening": false,
+      "autoSkipTitles": false
+
     }
 
     return GM_getValue('globalSettings', globalSettings);
@@ -89,10 +148,11 @@ document.addEventListener("keydown", function(event) {
   function playVideo(videoElement) {
     if (videoElement) {
       videoElement.play();
+      videoElement.focus();
     }
   }
 
-  function nextEpisode(bool) {
+  function removeDelayNextEpisode(bool) {
     if (bool) {
       const nextEpisodeBtn = getElement('.c100.center.p10');
 
@@ -100,6 +160,13 @@ document.addEventListener("keydown", function(event) {
         nextEpisodeBtn.click();
       }
     }
+  }
+
+  function nextSeries(videoElement) {
+    videoElement.currentTime = videoElement.duration - 0.1;
+  }
+  function goToVideoStartTime(videoElement) {
+    videoElement.currentTime = 0;
   }
 
   function skipOpening(openingDuration = 0, openingTimeStart = 0) {
@@ -135,23 +202,59 @@ document.addEventListener("keydown", function(event) {
   }
 
   function createAnimeSettingsDialog() {
-    const dialogHTML = ` <div id="animeSettingsDialog" class="modal-dialog" > <div class="modal-content" > <h1>Название аниме</h1> <input disabled type="text" id="animeTitleInput"
-      value="name" > <div class="custom-checkbox" > <h2>Базовые настройки</h2> <label for="isRemoveDelayNextEpisode" >Убрать задержку начала следующей серии</label> <input type="checkbox" value="0" checked id="isRemoveDelayNextEpisode" > </div> <div> <h2>Пропуск опенинга</h2> <label for="openingDuration" >Продолжительность опенинга</label> <input type="number" min="0" id="openingDuration" value="0" > сек <br> <label for="openingStart" >Начало опенинга на</label> <input type="number" min="0" id="openingStart" value="0" > сек </div> <div> <h2>Пропуск титров</h2> <label for="titleDuration" >Продолжительность титров</label> <input type="number" min="0" id="titleDuration" value="0" > сек <br> <label for="titleStart" >Начало титров на</label> <input type="number" min="0" id="titleStart" value="0" > сек </div> <button id="saveSettings" >Сохранить</button> </div> <footer> <p style="margin-top:10px;font-size:14px;" >© Made by DenisGasilo <a target="_blank" href="https://github.com/DenisGas/HDRezka-AutoClick-UserScript" >Extension page</a></p> </footer> </div> <div id="modalOverlay" class="modal-overlay" ></div> `;
+    const dialogHTML = `  <div id="animeSettingsDialog" class="modal-dialog">
+    <div class="modal-content">
+    <h1>Название аниме</h1>
+    <input disabled type="text" id="animeTitleInput">
+    <div id="basicSettings">
+      <h2>Базовые настройки</h2>
+      <input type="checkbox" id="scriptOFF">
+      <label for="scriptOFF">Выключить скрипт</label>
+      <br>
+      <input type="checkbox" checked id="isRemoveDelayNextEpisode">
+      <label for="isRemoveDelayNextEpisode">Убрать задержку начала следующей серии</label>
+      <br>
+      <input type="checkbox" id="autoSkipOpening">
+      <label for="autoSkipOpening">Пропускать опенинг автоматически</label>
+      <br>
+      <input type="checkbox" id="autoSkipTitles">
+      <label for="autoSkipTitles">Пропускать титры автоматически</label>
+    </div>
+    <div>
+      <h2>Пропуск опенинга</h2> <label for="openingDuration">Продолжительность опенинга</label> <input type="number"
+        min="0" id="openingDuration" value="0"> сек <br> <label for="openingStart">Начало опенинга на</label> <input
+        type="number" min="0" id="openingStart" value="0"> сек
+    </div>
+    <div>
+      <h2>Пропуск титров</h2> <label for="titleDuration">Продолжительность титров</label> <input type="number" min="0"
+        id="titleDuration" value="0"> сек <br> <label for="titleStart">Начало титров на</label> <input type="number"
+        min="0" id="titleStart" value="0"> сек
+    </div> <button id="saveSettings">Сохранить</button>
+  </div>
+  <footer>
+    <p style="margin-top:10px;font-size:14px;">© Made by DenisGasilo <a target="_blank"
+        href="https://github.com/DenisGas/HDRezka-AutoClick-UserScript">Extension page</a></p>
+  </footer>
+  </div>
+  <div id="modalOverlay" class="modal-overlay"></div>`;
 
     const dialogContainer = document.createElement('div');
     dialogContainer.innerHTML = dialogHTML;
     document.body.appendChild(dialogContainer);
+    const basicSettingsBlock = document.getElementById("basicSettings");
+
+    const checkboxes = basicSettingsBlock.querySelectorAll("input[type='checkbox']");
+
+    checkboxes.forEach(checkbox => {
+      checkbox.addEventListener("change", saveData);
+      checkbox.addEventListener("change", updateData);
+
+    });
+
 
     const dialog = document.getElementById('animeSettingsDialog');
-    const animeTitleInput = document.getElementById('animeTitleInput');
-    const openingDurationInput = document.getElementById('openingDuration');
-    const openingStartInput = document.getElementById('openingStart');
-    const titleDurationInput = document.getElementById('titleDuration');
-    const titleStartInput = document.getElementById('titleStart');
     const saveButton = document.getElementById('saveSettings');
     const modalOverlay = document.getElementById('modalOverlay');
-    const removeDelayNextEpisodeCheckbox = document.getElementById('isRemoveDelayNextEpisode');
-
 
     modalOverlay.addEventListener('click', () => {
       modalOverlay.style.display = 'none';
@@ -162,44 +265,9 @@ document.addEventListener("keydown", function(event) {
     updateData();
 
     saveButton.addEventListener('click', () => {
-
-      const newTitle = {
-        "name": getElement('.b-post__origtitle').innerText,
-        "openingDuration": openingDurationInput.value,
-        "openingStart": openingStartInput.value,
-        "titleDuration": titleDurationInput.value,
-        "titleStart": titleStartInput.value
-      }
-
-        ;
-
-      const globalSettings = {
-        "lang": "ru",
-        "scriptOFF": false,
-        "removeDelayNextEpisode": removeDelayNextEpisodeCheckbox.checked
-      }
-
-        ;
-
-      const titleSettingsArray = GM_getValue('titleSettings', []);
-
-      const existingIndex = titleSettingsArray.findIndex(item => item.name === newTitle.name);
-
-      if (existingIndex !== -1) {
-        titleSettingsArray[existingIndex] = newTitle;
-      }
-
-      else {
-        titleSettingsArray.push(newTitle);
-      }
-
-      GM_setValue('globalSettings', globalSettings);
-
-      GM_setValue('titleSettings', titleSettingsArray);
-
+      saveData();
       updateData();
-      dialog.style.display = 'none';
-      modalOverlay.style.display = 'none';
+      closeModal(modalOverlay, dialog);
     });
   }
 
@@ -217,18 +285,71 @@ document.addEventListener("keydown", function(event) {
     openButton.addEventListener('click', () => {
       const modalOverlay = document.getElementById('modalOverlay');
       const dialog = document.getElementById('animeSettingsDialog');
-      updateData();
-
       if (modalOverlay.style.display === 'block') {
-
-        modalOverlay.style.display = 'none';
-        dialog.style.display = 'none';
+        closeModal(modalOverlay, dialog);
         return
       }
-
-      modalOverlay.style.display = 'block';
-      dialog.style.display = 'block';
+      openModal(modalOverlay, dialog);
     });
+  }
+
+  function openModal(...arrs) {
+    updateData();
+    for (const elem of arrs) {
+      elem.style.display = 'block';
+    }
+
+  }
+
+  function closeModal(...arrs) {
+    for (const elem of arrs) {
+      elem.style.display = 'none';
+    }
+
+  }
+
+  function saveData() {
+    const openingDurationInput = document.getElementById('openingDuration');
+    const openingStartInput = document.getElementById('openingStart');
+    const titleDurationInput = document.getElementById('titleDuration');
+    const titleStartInput = document.getElementById('titleStart');
+    const autoSkipOpening = document.getElementById('autoSkipOpening');
+    const autoSkipTitles = document.getElementById('autoSkipTitles');
+    const scriptOffCheckbox = document.getElementById('scriptOFF');
+    const removeDelayNextEpisodeCheckbox = document.getElementById('isRemoveDelayNextEpisode');
+
+    const newTitle = {
+      "name": getElement('.b-post__origtitle').innerText,
+      "openingDuration": openingDurationInput.value,
+      "openingStart": openingStartInput.value,
+      "titleDuration": titleDurationInput.value,
+      "titleStart": titleStartInput.value
+    }
+
+    const globalSettings = {
+      "lang": "ru",
+      "scriptOFF": scriptOffCheckbox.checked,
+      "removeDelayNextEpisode": removeDelayNextEpisodeCheckbox.checked,
+      "autoSkipOpening": autoSkipOpening.checked,
+      "autoSkipTitles": autoSkipTitles.checked
+    }
+
+    const titleSettingsArray = GM_getValue('titleSettings', []);
+
+    const existingIndex = titleSettingsArray.findIndex(item => item.name === newTitle.name);
+
+    if (existingIndex !== -1) {
+      titleSettingsArray[existingIndex] = newTitle;
+    }
+
+    else {
+      titleSettingsArray.push(newTitle);
+    }
+
+    GM_setValue('globalSettings', globalSettings);
+
+    GM_setValue('titleSettings', titleSettingsArray);
+
   }
 
   function updateData() {
@@ -238,41 +359,61 @@ document.addEventListener("keydown", function(event) {
     const titleDurationInput = document.getElementById('titleDuration');
     const titleStartInput = document.getElementById('titleStart');
     const animeTitleInput = document.getElementById('animeTitleInput');
-
-    const globalSettingsD = {
-      "lang": "ru",
-      "scriptOFF": false,
-      "removeDelayNextEpisode": true
-    }
-
-    let titleSettings = {
-      "name": "name",
-      "openingDuration": "0",
-      "openingStart": "0",
-      "titleDuration": "0",
-      "titleStart": "0"
-    }
-
-      ;
-
-    const titleSettingsArray = GM_getValue('titleSettings', []);
-    const globalSettings = GM_getValue('globalSettings', globalSettingsD);
-
-    const existingIndex = titleSettingsArray.findIndex(item => item.name === getElement('.b-post__origtitle').innerText);
+    const autoSkipOpening = document.getElementById('autoSkipOpening');
+    const autoSkipTitles = document.getElementById('autoSkipTitles');
+    const scriptOffCheckbox = document.getElementById('scriptOFF');
 
 
-    if (existingIndex !== -1) {
-      titleSettings = titleSettingsArray[existingIndex];
-    }
+    const titleSettings = getTitleSettings();
+    const globalSettings = getGlobalSettings();
 
     animeTitleInput.value = getElement('.b-post__origtitle').innerText;
+
+
     openingDurationInput.value = titleSettings.openingDuration;
     openingStartInput.value = titleSettings.openingStart;
     titleDurationInput.value = titleSettings.titleDuration;
     titleStartInput.value = titleSettings.titleStart;
 
-    removeDelayNextEpisodeCheckbox.value = globalSettings.removeDelayNextEpisode;
     removeDelayNextEpisodeCheckbox.checked = globalSettings.removeDelayNextEpisode;
+    autoSkipOpening.checked = globalSettings.autoSkipOpening;
+    autoSkipTitles.checked = globalSettings.autoSkipTitles;
+    scriptOffCheckbox.checked = globalSettings.scriptOFF;
+
+    if (scriptOffCheckbox.checked) {
+      autoSkipOpening.disabled = true;
+      autoSkipTitles.disabled = true;
+      openingDurationInput.disabled = true;
+      titleDurationInput.disabled = true;
+      removeDelayNextEpisodeCheckbox.disabled = true;
+    } else {
+      autoSkipOpening.disabled = false;
+      autoSkipTitles.disabled = false;
+      openingDurationInput.disabled = false;
+      titleDurationInput.disabled = false;
+      removeDelayNextEpisodeCheckbox.disabled = false;
+    }
+
+    if (autoSkipOpening.checked && !(autoSkipOpening.disabled)) {
+      openingStartInput.disabled = false;
+    } else {
+      openingStartInput.disabled = true;
+    }
+
+
+    if (autoSkipTitles.checked && !(autoSkipTitles.disabled)) {
+      titleStartInput.disabled = false;
+    } else {
+      titleStartInput.disabled = true;
+    }
+
+    if (scriptOffCheckbox.checked) {
+      removeAllEventListeners();
+      clearAllIntervals();
+      return
+    }
+
+    scriptOn(removeDelayNextEpisodeCheckbox.checked, autoSkipOpening.checked, autoSkipTitles.checked);
   }
 
   GM_addStyle(` #animeSettingsDialog {
